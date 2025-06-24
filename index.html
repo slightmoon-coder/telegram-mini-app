@@ -2,32 +2,298 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<title>Кейс с подарками</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🎁 Кейс подарков</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; }
-  button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #00b894; border: none; border-radius: 8px; color: #fff; margin-top: 40px;}
-  .result { margin-top: 30px; font-size: 24px; }
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    font-family: 'Montserrat', sans-serif;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 20px;
+    user-select: none;
+  }
+
+  h1 {
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+
+  .case {
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle at center, #f9d423 0%, #ff4e50 100%);
+    border-radius: 25px;
+    box-shadow:
+      0 15px 25px rgba(255, 78, 80, 0.7),
+      inset 0 0 20px #fff3b0;
+    position: relative;
+    cursor: pointer;
+    perspective: 900px;
+  }
+
+  /* Крышка кейса */
+  .lid {
+    width: 100%;
+    height: 110px;
+    background: linear-gradient(135deg, #ff8a65, #d84315);
+    border-radius: 25px 25px 0 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: bottom center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 3;
+  }
+
+  .case.open .lid {
+    transform: rotateX(-110deg);
+    box-shadow: none;
+  }
+
+  /* Корпус кейса */
+  .body {
+    width: 100%;
+    height: 110px;
+    background: linear-gradient(135deg, #ff7043, #bf360c);
+    border-radius: 0 0 25px 25px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    box-shadow: inset 0 5px 10px rgba(0,0,0,0.4);
+    z-index: 1;
+  }
+
+  /* Приз */
+  .prize {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 700;
+    font-size: 22px;
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 0 15px #fff4a3, 0 0 30px #fff4a3;
+    transition: opacity 1s ease 1s;
+    user-select: none;
+    z-index: 4;
+    max-width: 90%;
+  }
+
+  .case.open .prize {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Кнопка */
+  #openBtn {
+    margin-top: 30px;
+    padding: 15px 45px;
+    font-size: 20px;
+    font-weight: 700;
+    border: none;
+    border-radius: 35px;
+    background: linear-gradient(135deg, #ff8a65, #d84315);
+    color: #fff;
+    box-shadow: 0 10px 25px rgba(255, 78, 80, 0.6);
+    cursor: pointer;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    user-select: none;
+  }
+
+  #openBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ff7043, #bf360c);
+    box-shadow: 0 12px 30px rgba(255, 78, 80, 0.8);
+  }
+
+  #openBtn:disabled {
+    cursor: default;
+    background: #aaa;
+    box-shadow: none;
+  }
+
+  /* Конфетти */
+  canvas#confetti {
+    position: fixed;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+  }
+
+  /* Мобильная адаптация */
+  @media (max-width: 480px) {
+    .case {
+      width: 180px;
+      height: 180px;
+    }
+    .lid, .body {
+      height: 90px;
+    }
+    .prize {
+      font-size: 18px;
+      max-width: 95%;
+    }
+    #openBtn {
+      font-size: 18px;
+      padding: 12px 35px;
+    }
+  }
 </style>
 </head>
 <body>
-  <h1>Открыть подарок</h1>
-  <button id="openCaseBtn">Открыть кейс</button>
-  <div class="result" id="result"></div>
+  <h1>Открой свой подарок!</h1>
+  <div id="case" class="case" role="button" aria-pressed="false" tabindex="0" aria-label="Открыть кейс">
+    <div class="lid"></div>
+    <div class="body"></div>
+    <div class="prize" id="prizeText">🎁</div>
+  </div>
+  <button id="openBtn">Открыть кейс</button>
+  <canvas id="confetti"></canvas>
 
-<script>
-  const tg = window.Telegram?.WebApp;
-  if (tg) tg.expand();
+  <script>
+    // Конфиг призов и вероятностей
+    const prizes = [
+      { text: "🔥 Огненный подарок ($1.5)", weight: 5 },
+      { text: "💰 Подарок на $1.0", weight: 25 },
+      { text: "📦 Стикерпак ($0.3)", weight: 30 },
+      { text: "❌ Ничего не выпало 😢", weight: 40 }
+    ];
 
-  document.getElementById('openCaseBtn').addEventListener('click', () => {
-    const rand = Math.random();
-    let prize;
-    if (rand < 0.05) prize = "🔥 Огненный подарок ($1.5)";
-    else if (rand < 0.3) prize = "💰 Подарок на $1.0";
-    else if (rand < 0.6) prize = "📦 Стикерпак ($0.3)";
-    else prize = "❌ Ничего не выпало 😢";
+    // Выбор приза с учётом веса
+    function getPrize() {
+      let total = prizes.reduce((sum, p) => sum + p.weight, 0);
+      let r = Math.random() * total;
+      for (let prize of prizes) {
+        if (r < prize.weight) return prize.text;
+        r -= prize.weight;
+      }
+      return prizes[prizes.length - 1].text;
+    }
 
-    document.getElementById('result').textContent = `🎉 Ты получил: ${prize}`;
-  });
-</script>
+    const caseEl = document.getElementById('case');
+    const prizeText = document.getElementById('prizeText');
+    const openBtn = document.getElementById('openBtn');
+    const confettiCanvas = document.getElementById('confetti');
+    const ctx = confettiCanvas.getContext('2d');
+
+    // Resize canvas
+    function resizeCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Конфетти код (упрощённый)
+    class ConfettiParticle {
+      constructor() {
+        this.x = Math.random() * confettiCanvas.width;
+        this.y = Math.random() * -confettiCanvas.height;
+        this.size = (Math.random() * 7) + 4;
+        this.speed = (Math.random() * 3) + 2;
+        this.angle = Math.random() * 360;
+        this.rotationSpeed = (Math.random() * 10) + 5;
+        this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+      }
+      update() {
+        this.y += this.speed;
+        this.angle += this.rotationSpeed;
+        if (this.y > confettiCanvas.height) {
+          this.y = -this.size;
+          this.x = Math.random() * confettiCanvas.width;
+        }
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle * Math.PI / 180);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size * 0.4);
+        ctx.restore();
+      }
+    }
+
+    let confettiParticles = [];
+
+    function createConfetti() {
+      confettiParticles = [];
+      for (let i = 0; i < 150; i++) {
+        confettiParticles.push(new ConfettiParticle());
+      }
+    }
+
+    function updateConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      for (let p of confettiParticles) {
+        p.update();
+        p.draw(ctx);
+      }
+    }
+
+    let confettiActive = false;
+    let confettiInterval;
+
+    function startConfetti() {
+      if (confettiActive) return;
+      confettiActive = true;
+      createConfetti();
+      confettiInterval = setInterval(updateConfetti, 16);
+      setTimeout(stopConfetti, 5000);
+    }
+
+    function stopConfetti() {
+      confettiActive = false;
+      clearInterval(confettiInterval);
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+
+    // Логика открытия кейса
+    openBtn.addEventListener('click', () => {
+      if (caseEl.classList.contains('open')) {
+        // Сброс кейса
+        caseEl.classList.remove('open');
+        prizeText.textContent = "🎁";
+        openBtn.textContent = "Открыть кейс";
+      } else {
+        // Открываем кейс с анимацией
+        caseEl.classList.add('open');
+        openBtn.textContent = "Открыть ещё";
+
+        // Через 1 секунду показать приз и запустить конфетти
+        setTimeout(() => {
+          const prize = getPrize();
+          prizeText.textContent = prize;
+          if (!prize.startsWith("❌")) startConfetti();
+        }, 1000);
+      }
+    });
+
+    // Поддержка открытия кейса по Enter или Space с клавиатуры
+    caseEl.addEventListener('keydown', e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openBtn.click();
+      }
+    });
+  </script>
 </body>
 </html>
+
