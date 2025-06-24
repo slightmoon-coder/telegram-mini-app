@@ -45,7 +45,6 @@
     perspective: 900px;
   }
 
-  /* Крышка кейса */
   .lid {
     width: 100%;
     height: 110px;
@@ -65,7 +64,6 @@
     box-shadow: none;
   }
 
-  /* Корпус кейса */
   .body {
     width: 100%;
     height: 110px;
@@ -78,7 +76,6 @@
     z-index: 1;
   }
 
-  /* Приз */
   .prize {
     position: absolute;
     top: 50%;
@@ -100,7 +97,6 @@
     pointer-events: auto;
   }
 
-  /* Кнопка */
   #openBtn {
     margin-top: 30px;
     padding: 15px 45px;
@@ -127,7 +123,6 @@
     box-shadow: none;
   }
 
-  /* Конфетти */
   canvas#confetti {
     position: fixed;
     pointer-events: none;
@@ -138,7 +133,6 @@
     z-index: 9999;
   }
 
-  /* Мобильная адаптация */
   @media (max-width: 480px) {
     .case {
       width: 180px;
@@ -166,10 +160,14 @@
     <div class="prize" id="prizeText">🎁</div>
   </div>
   <button id="openBtn">Открыть кейс</button>
+  
+  <!-- Звуки -->
+  <audio id="soundOpen" src="open.mp3"></audio>
+  <audio id="soundWin" src="win.mp3"></audio>
+  
   <canvas id="confetti"></canvas>
 
   <script>
-    // Конфиг призов и вероятностей
     const prizes = [
       { text: "🔥 Огненный подарок ($1.5)", weight: 5 },
       { text: "💰 Подарок на $1.0", weight: 25 },
@@ -177,7 +175,6 @@
       { text: "❌ Ничего не выпало 😢", weight: 40 }
     ];
 
-    // Выбор приза с учётом веса
     function getPrize() {
       let total = prizes.reduce((sum, p) => sum + p.weight, 0);
       let r = Math.random() * total;
@@ -193,8 +190,9 @@
     const openBtn = document.getElementById('openBtn');
     const confettiCanvas = document.getElementById('confetti');
     const ctx = confettiCanvas.getContext('2d');
+    const soundOpen = document.getElementById('soundOpen');
+    const soundWin = document.getElementById('soundWin');
 
-    // Resize canvas
     function resizeCanvas() {
       confettiCanvas.width = window.innerWidth;
       confettiCanvas.height = window.innerHeight;
@@ -202,7 +200,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Конфетти код (упрощённый)
     class ConfettiParticle {
       constructor() {
         this.x = Math.random() * confettiCanvas.width;
@@ -265,28 +262,28 @@
       ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
     }
 
-    // Логика открытия кейса
     openBtn.addEventListener('click', () => {
       if (caseEl.classList.contains('open')) {
-        // Сброс кейса
         caseEl.classList.remove('open');
         prizeText.textContent = "🎁";
         openBtn.textContent = "Открыть кейс";
       } else {
-        // Открываем кейс с анимацией
+        soundOpen.play();
         caseEl.classList.add('open');
         openBtn.textContent = "Открыть ещё";
 
-        // Через 1 секунду показать приз и запустить конфетти
         setTimeout(() => {
           const prize = getPrize();
           prizeText.textContent = prize;
-          if (!prize.startsWith("❌")) startConfetti();
+
+          if (!prize.startsWith("❌")) {
+            soundWin.play();
+            startConfetti();
+          }
         }, 1000);
       }
     });
 
-    // Поддержка открытия кейса по Enter или Space с клавиатуры
     caseEl.addEventListener('keydown', e => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -296,4 +293,3 @@
   </script>
 </body>
 </html>
-
